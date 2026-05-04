@@ -1,5 +1,5 @@
-from crawler import crawl
-from indexer import build_index
+from src.crawler import crawl
+from src.indexer import build_index
 
 if __name__ == "__main__":
     pages = crawl()
