@@ -9,6 +9,8 @@ def build_index(pages):
                 index[word] = []
 
             if url not in index[word]:
-                index[word].append(url)
+                index[word][url] = 0
+
+            index[word][url] += 1
 
     return index
