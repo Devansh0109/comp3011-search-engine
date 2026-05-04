@@ -6,7 +6,7 @@ def build_index(pages):
 
         for word in words:
             if word not in index:
-                index[word] = []
+                index[word] = {}
 
             if url not in index[word]:
                 index[word][url] = 0
