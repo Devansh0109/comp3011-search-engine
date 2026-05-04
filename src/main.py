@@ -1,7 +1,7 @@
 from src.crawler import crawl
 from src.indexer import build_index
 
-if __name__ == "__main__":
+def main():
     pages = crawl()
     print(f"Number of pages crawled: {len(pages)}")
 
@@ -14,3 +14,6 @@ if __name__ == "__main__":
         print(f"'{word}' found in pages: {index[word]}")
     else:
         print(f"'{word}' not found")
+
+if __name__ == "__main__":
+    main()
