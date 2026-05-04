@@ -1,7 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
+import time
 
 BASE_URL = "https://quotes.toscrape.com"
+DELAY = 6
 
 def crawl():
     urls = [BASE_URL]
@@ -13,18 +15,28 @@ def crawl():
         if url in visited:
             continue
 
-        print(f"Crawling: {url}")
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
+        try:
+            print(f"Crawling: {url}")
+            response = requests.get(url)
+            response.raise_for_status()
 
-        text = soup.get_text()
-        pages[url] = text
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        visited.add(url)
+            text = soup.get_text()
+            pages[url] = text
 
-        next_page = soup.find("li", class_="next")
-        if next_page:
-            next_link = next_page.find("a")["href"]
-            urls.append(BASE_URL + next_link)
+            visited.add(url)
 
+            next_page = soup.find("li", class_="next")
+            if next_page:
+                next_link = next_page.find("a")["href"]
+                full_url = BASE_URL + next_link
+                if full_url not in visited:
+                    urls.append(full_url)
+
+            time.sleep(DELAY)
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching {url}: {e}")
+            
     return pages
