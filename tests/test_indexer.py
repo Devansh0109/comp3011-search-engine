@@ -20,6 +20,9 @@ def test_basic_index():
     assert "page1" in index["hello"]
     assert "page2" in index["hello"]
 
+    assert index["hello"]["page1"] == 1
+    assert index["hello"]["page2"] == 1
+
 def test_empty_pages():
     pages = {}
     index = build_index(pages)
