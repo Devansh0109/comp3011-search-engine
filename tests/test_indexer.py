@@ -1,8 +1,3 @@
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from src.indexer import build_index
 
 def test_basic_index():
@@ -28,3 +23,12 @@ def test_empty_pages():
     index = build_index(pages)
 
     assert index == {}
+
+def test_word_frequency():
+    pages = {
+        "page1": "hello hello world"
+    }
+    index = build_index(pages)
+
+    assert index["hello"]["page1"] == 2
+    assert index["world"]["page1"] == 1
