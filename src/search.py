@@ -7,3 +7,11 @@ def print_word(index, word):
             print(f"Page: {page}, Frequency: {data['frequency']}, Positions: {data['positions']}")
     else:
         print(f"Word '{word}' not found in index")
+
+def find_word(index, word):
+    word = word.lower()
+
+    if word in index:
+        return list(index[word].keys())
+    else:
+        return []
