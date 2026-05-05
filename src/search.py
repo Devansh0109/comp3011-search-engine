@@ -4,10 +4,11 @@ def print_word(index, word):
     if word in index:
         print(f"Word: {word}")
         for page, data in index[word].items():
-            print(f"Page: {page}," 
-                  f"Frequency: {data['frequency']},"
-                  f"Positions: {data['positions']}"
-                  )
+            print(
+                f"Page: {page}, "
+                f"Frequency: {data['frequency']}, "
+                f"Positions: {data['positions']}"
+            )
     else:
         print(f"Word '{word}' not found in index")
 
