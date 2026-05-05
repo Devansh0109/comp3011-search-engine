@@ -40,5 +40,43 @@ def test_find_word_not_found():
     index = {}
 
     results = find_word(index, "missing")
-
     assert results == []
+
+def test_multi_word_query():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]},
+            "page2": {"frequency": 1, "positions": [1]}
+        },
+        "world": {
+            "page2": {"frequency": 1, "positions": [2]},
+            "page3": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_word(index, "hello world")
+    assert results == ["page2"] or results == ["page2"]
+
+def test_multi_word_no_match():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]}
+        },
+        "world": {
+            "page2": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_word(index, "hello world")
+    assert results == []
+
+def test_empty_query():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_word(index, "")
+    assert results == []
+
