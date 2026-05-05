@@ -1,6 +1,7 @@
 from src.crawler import crawl
 from src.indexer import build_index
 from src.search import print_word, find_word
+from src.storage import save_index, load_index
 
 def main():
     pages = crawl()
@@ -9,24 +10,21 @@ def main():
     index = build_index(pages)
     print(f"Number of unique words indexed: {len(index)}")
 
-    print_word(index, "life")
+    save_index(index)
 
-    results = find_word(index, "life")
+    loaded_index = load_index()
+
+    print_word(loaded_index, "life")
+
+    query = "life love"
+    results = find_word(loaded_index, query)
 
     if results:
-        print(f"Pages containing 'life':")
+        print(f"Pages containing '{query}':")
         for page in results:
             print(page)
     else:
-        print("No results found")
-
-    # check one word
-    word = "life"
-    if word in index:
-        print(f"'{word}' found in pages: {index[word]}")
-    else:
-        print(f"'{word}' not found")
-
+        print(f"No results found for '{query}'")
 
 if __name__ == "__main__":
     main()
