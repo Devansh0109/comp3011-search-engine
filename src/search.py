@@ -8,10 +8,19 @@ def print_word(index, word):
     else:
         print(f"Word '{word}' not found in index")
 
-def find_word(index, word):
-    word = word.lower()
+def find_word(index, query):
+    words = query().lower().split()
 
-    if word in index:
-        return list(index[word].keys())
-    else:
-        return []
+    if not words:
+        return[]
+    
+    result_sets = []
+
+    for word in words:
+        if word in index:
+            result_sets.append(set((index[word].keys())))
+        else:
+            return []
+        
+    results = set.intersection(*result_sets)
+    return list(results)
