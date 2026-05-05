@@ -80,3 +80,16 @@ def test_empty_query():
     results = find_word(index, "")
     assert results == []
 
+def test_find_word_returns_sorted_results():
+    index = {
+        "hello": {
+            "page3": {"frequency": 1, "positions": [0]},
+            "page1": {"frequency": 1, "positions": [0]},
+            "page2": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_word(index, "hello")
+
+    assert results == ["page1", "page2", "page3"]
+
