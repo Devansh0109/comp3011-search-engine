@@ -4,15 +4,18 @@ def print_word(index, word):
     if word in index:
         print(f"Word: {word}")
         for page, data in index[word].items():
-            print(f"Page: {page}, Frequency: {data['frequency']}, Positions: {data['positions']}")
+            print(f"Page: {page}," 
+                  f"Frequency: {data['frequency']},"
+                  f"Positions: {data['positions']}"
+                  )
     else:
         print(f"Word '{word}' not found in index")
 
 def find_word(index, query):
-    words = query().lower().split()
+    words = query.lower().split()
 
     if not words:
-        return[]
+        return []
     
     result_sets = []
 
@@ -23,4 +26,4 @@ def find_word(index, query):
             return []
         
     results = set.intersection(*result_sets)
-    return list(results)
+    return sorted(results)
