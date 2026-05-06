@@ -4,6 +4,7 @@ import time
 
 BASE_URL = "https://quotes.toscrape.com"
 DELAY = 6
+REQUEST_TIMEOUT = 10
 
 def crawl():
     urls = [BASE_URL]
@@ -17,13 +18,11 @@ def crawl():
 
         try:
             print(f"Crawling: {url}")
-            response = requests.get(url)
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "html.parser")
-
-            text = soup.get_text()
-            pages[url] = text
+            pages[url] = soup.get_text(separator=" ")
 
             visited.add(url)
 
@@ -36,7 +35,7 @@ def crawl():
 
             time.sleep(DELAY)
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching {url}: {e}")
-            
+        except requests.exceptions.RequestException as error:
+            print(f"Error fetching {url}: {error}")
+
     return pages
