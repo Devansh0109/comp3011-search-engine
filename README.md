@@ -17,6 +17,8 @@ The project demonstrates key search engine concepts including:
 - persistent index storage
 - command-line interaction
 - automated testing
+- TF-IDF-style ranking
+- basic benchmarking and complexity analysis
 
 The implementation is written in Python and uses `requests` for HTTP requests and `BeautifulSoup` for parsing HTML pages.
 
@@ -47,9 +49,10 @@ This website contains multiple pages of quotes and is designed for web scraping 
 - Loads the saved index from the file system
 - Provides an interactive command-line interface
 - Supports single-word and multi-word queries
+- Ranks search results using a TF-IDF-style relevance score
 - Handles missing words and empty queries gracefully
 - Includes automated tests using `pytest`
-- Ranks search results using a TF-IDF-style relevance score
+- Includes a benchmark script for build and search performance
 
 ---
 
@@ -57,6 +60,7 @@ This website contains multiple pages of quotes and is designed for web scraping 
 
 ```text
 comp3011-search-engine/
+├── benchmark.py
 ├── data/
 │   └── index.json
 ├── src/
@@ -251,6 +255,8 @@ https://quotes.toscrape.com/page/2/
 
 Multi-word search uses intersection logic, meaning only pages containing **all** query terms are returned.
 
+The matching pages are ranked using a TF-IDF-style relevance score.
+
 ---
 
 ### 5. `exit`
@@ -371,6 +377,7 @@ Multi-word search works by:
 1. retrieving the set of pages for each word
 2. calculating the intersection of these page sets
 3. returning only pages that contain all query words
+4. ranking the matching pages using a TF-IDF-style relevance score
 
 For example:
 
@@ -380,7 +387,7 @@ find change world
 
 returns only pages that contain both `change` and `world`.
 
-Search results are sorted before being returned so that output is deterministic and easier to test.
+If two pages have the same relevance score, they are sorted alphabetically by URL. This keeps the output deterministic and easier to test.
 
 ---
 
@@ -392,6 +399,100 @@ The score is based on:
 
 ```text
 term frequency × inverse document frequency
+```
+
+Term frequency comes from the inverted index and represents how often a query word appears on a page.
+
+Inverse document frequency gives more weight to words that appear in fewer pages.
+
+For a multi-word query, the tool first finds pages that contain all query words. It then calculates a combined relevance score for each matching page and returns the pages in ranked order.
+
+If two pages have the same score, they are sorted alphabetically by URL to keep the output deterministic and easy to test.
+
+This ranking feature goes beyond the basic requirement of simply returning matching pages and makes the search results more meaningful.
+
+---
+
+## Complexity Analysis
+
+The main operations in the search engine are crawling, indexing, loading, printing, and searching.
+
+### Crawling
+
+If the website has `P` pages, the crawler visits each page once.
+
+```text
+Time complexity: O(P)
+Space complexity: O(P)
+```
+
+The crawler also follows a required 6-second politeness delay between requests, so the practical runtime is affected by the number of pages crawled.
+
+---
+
+### Indexing
+
+If the crawled pages contain `N` total word tokens, the indexer processes each token once.
+
+```text
+Time complexity: O(N)
+Space complexity: O(U + O)
+```
+
+Where:
+
+- `U` is the number of unique words
+- `O` is the total number of stored word occurrences/positions
+
+The index stores frequency and positional information, so it requires more space than a basic word-to-page index, but it provides richer search statistics.
+
+---
+
+### Single-Word Search
+
+For a single-word query, the search tool directly looks up the word in the inverted index.
+
+```text
+Average lookup time: O(1)
+Result processing and ranking: O(R log R)
+```
+
+Where `R` is the number of matching pages. The `R log R` factor comes from sorting/ranking the results.
+
+---
+
+### Multi-Word Search
+
+For a multi-word query with `Q` query terms, the tool retrieves the page set for each term and calculates the intersection.
+
+```text
+Time complexity: O(Q × R)
+```
+
+Where `R` is the average number of pages containing each query term.
+
+After matching pages are found, the tool calculates a TF-IDF-style score and sorts the results.
+
+---
+
+### Storage
+
+Saving and loading the index require reading or writing the full JSON index file.
+
+```text
+Time complexity: O(S)
+Space complexity: O(S)
+```
+
+Where `S` is the size of the saved index file.
+
+---
+
+### Design Trade-Off
+
+The project uses a nested dictionary for the inverted index because it provides fast word lookups and makes the data easy to save as JSON.
+
+The trade-off is that storing positions increases memory usage, but it improves the quality of the index and allows more detailed search statistics to be displayed.
 
 ---
 
@@ -411,6 +512,43 @@ The workflow is:
 build → crawl website → build index → save index
 load  → load saved index → search using print/find
 ```
+
+---
+
+## Benchmarking
+
+A small benchmark script is included in `benchmark.py`.
+
+Run it with:
+
+```bash
+python3 benchmark.py
+```
+
+The benchmark measures:
+
+- total build time
+- number of pages crawled
+- number of unique indexed words
+- search time for example queries
+
+Example benchmark output:
+
+```text
+Build Benchmark
+Pages crawled: 10
+Unique words indexed: 842
+Total build time: 64.47 seconds
+Index loaded from data/index.json
+
+Search Benchmark
+Query: 'life' | Results: 10 | Search time: 0.000126 seconds
+Query: 'love' | Results: 10 | Search time: 0.000118 seconds
+Query: 'change world' | Results: 2 | Search time: 0.000107 seconds
+Query: 'xyzabc' | Results: 0 | Search time: 0.000105 seconds
+```
+
+The build time is mainly affected by the required 6-second politeness delay between page requests. Search queries are much faster because they use the saved inverted index instead of crawling the website again.
 
 ---
 
@@ -460,7 +598,9 @@ The implementation started with a basic crawler and simple inverted index. It wa
 - regex tokenisation
 - JSON index persistence
 - command-line interface
+- TF-IDF-style ranking
 - automated testing and edge-case handling
+- benchmarking and complexity analysis
 
 This iterative approach helped validate each component before adding further functionality.
 
@@ -493,6 +633,7 @@ AI was useful for speeding up development and debugging, but it also required cr
 - The crawler uses a 6-second politeness delay between requests.
 - Running `build` takes longer than `load` because it crawls all pages.
 - The saved index file is located at `data/index.json`.
+- The benchmark script is located at `benchmark.py`.
 - The project can be tested using `pytest`.
 - The command-line interface supports `build`, `load`, `print`, `find`, and `exit`.
 
