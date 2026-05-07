@@ -1,4 +1,4 @@
-from src.search import print_word, find_word
+from src.search import print_word, find_word, calculate_tfidf_scores
 
 def test_print_word_found(capsys):
     index = {
@@ -92,4 +92,41 @@ def test_find_word_returns_sorted_results():
     results = find_word(index, "hello")
 
     assert results == ["page1", "page2", "page3"]
+
+def test_tfidf_ranking_prioritises_higher_frequency_page():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]},
+            "page2": {"frequency": 3, "positions": [0, 2, 4]}
+        },
+        "other": {
+            "page3": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_word(index, "hello")
+
+    assert results[0] == "page2"
+
+
+def test_tfidf_scores_only_include_pages_matching_all_query_words():
+    index = {
+        "hello": {
+            "page1": {"frequency": 2, "positions": [0, 1]},
+            "page2": {"frequency": 1, "positions": [0]}
+        },
+        "world": {
+            "page1": {"frequency": 1, "positions": [2]}
+        },
+        "other": {
+            "page3": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    scores = calculate_tfidf_scores(index, "hello world")
+
+    assert "page1" in scores
+    assert "page2" not in scores
+    assert "page3" not in scores
+    assert scores["page1"] > 0
 
