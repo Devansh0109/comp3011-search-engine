@@ -49,6 +49,7 @@ This website contains multiple pages of quotes and is designed for web scraping 
 - Supports single-word and multi-word queries
 - Handles missing words and empty queries gracefully
 - Includes automated tests using `pytest`
+- Ranks search results using a TF-IDF-style relevance score
 
 ---
 
@@ -383,6 +384,17 @@ Search results are sorted before being returned so that output is deterministic 
 
 ---
 
+## TF-IDF-Style Ranking
+
+The basic requirement for the `find` command is to return pages that contain the search query terms. As an additional enhancement, the search tool ranks matching pages using a TF-IDF-style relevance score.
+
+The score is based on:
+
+```text
+term frequency × inverse document frequency
+
+---
+
 ## Storage
 
 The generated inverted index is saved as a JSON file:
@@ -423,6 +435,8 @@ The test suite covers:
 - word position tracking
 - single-word search
 - multi-word search
+- TF-IDF-style relevance scoring
+- ranking pages by query relevance
 - empty queries
 - missing words
 - deterministic result ordering
