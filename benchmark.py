@@ -1,5 +1,6 @@
-import time
+"""Benchmark script for measuring build and search performance."""
 
+import time
 from src.crawler import crawl
 from src.indexer import build_index
 from src.search import find_word
@@ -7,6 +8,7 @@ from src.storage import load_index, save_index
 
 
 def benchmark_build_process():
+    """Measure the time taken to crawl, index, and save the website data."""
     start_time = time.perf_counter()
 
     pages = crawl()
@@ -22,6 +24,7 @@ def benchmark_build_process():
 
 
 def benchmark_search_process():
+    """Measure search time for several example queries."""
     index = load_index()
 
     queries = [

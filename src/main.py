@@ -1,3 +1,8 @@
+"""Command-line interface for the search engine tool.
+
+The CLI supports the coursework commands: build, load, print, find, and exit.
+"""
+
 from src.crawler import crawl
 from src.indexer import build_index
 from src.search import print_word, find_word
@@ -5,6 +10,7 @@ from src.storage import save_index, load_index
 
 
 def display_results(query, results):
+    """Display search results for a query in the command-line interface."""
     if results:
         print(f"Pages containing '{query}':")
         for page in results:
@@ -14,6 +20,7 @@ def display_results(query, results):
 
 
 def main():
+    """Run the interactive command-line interface."""
     index = None
 
     print("Search Engine Tool")

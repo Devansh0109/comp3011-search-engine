@@ -1,6 +1,14 @@
+"""Search module for printing index entries and finding ranked results.
+
+The search logic supports single-word and multi-word queries. Multi-word
+queries use set intersection so that only pages containing all query terms
+are returned. Matching pages are ranked using a TF-IDF-style score.
+"""
+
 import math
 
 def print_word(index, word):
+    """Print the inverted index entry for a single word."""
     word = word.lower()
 
     if word in index:
@@ -15,7 +23,7 @@ def print_word(index, word):
         print(f"Word '{word}' not found in index")
 
 def get_all_pages(index):
-
+    """Return all page URLs stored in the inverted index."""
     pages = set()
 
     for word_data in index.values():
@@ -25,7 +33,7 @@ def get_all_pages(index):
 
 
 def calculate_tfidf_scores(index, query):
-
+    """Calculate TF-IDF-style scores for pages matching all query words."""
     words = query.lower().split()
 
     if not words:
@@ -64,6 +72,7 @@ def calculate_tfidf_scores(index, query):
     return scores
 
 def find_word(index, query):
+    """Return ranked pages containing all words in the query."""
     scores = calculate_tfidf_scores(index, query)
 
     return sorted(scores.keys(), key=lambda page: (-scores[page], page))

@@ -18,7 +18,8 @@ The project demonstrates key search engine concepts including:
 - command-line interaction
 - automated testing
 - TF-IDF-style ranking
-- basic benchmarking and complexity analysis
+- benchmarking and complexity analysis
+- critical use of Generative AI during development
 
 The implementation is written in Python and uses `requests` for HTTP requests and `BeautifulSoup` for parsing HTML pages.
 
@@ -40,6 +41,8 @@ This website contains multiple pages of quotes and is designed for web scraping 
 
 - Crawls all paginated pages of the target website
 - Respects a politeness delay of 6 seconds between requests
+- Uses a request timeout to avoid hanging indefinitely
+- Handles request exceptions gracefully
 - Builds an inverted index from the crawled page text
 - Stores word frequency for each page
 - Stores word position information for each page
@@ -49,9 +52,11 @@ This website contains multiple pages of quotes and is designed for web scraping 
 - Loads the saved index from the file system
 - Provides an interactive command-line interface
 - Supports single-word and multi-word queries
-- Ranks search results using a TF-IDF-style relevance score
-- Handles missing words and empty queries gracefully
+- Uses intersection logic for multi-word queries
+- Ranks matching pages using a TF-IDF-style relevance score
+- Handles missing words, empty queries, unknown commands, and missing index files gracefully
 - Includes automated tests using `pytest`
+- Includes test coverage reporting using `pytest-cov`
 - Includes a benchmark script for build and search performance
 
 ---
@@ -129,6 +134,7 @@ The project uses the following Python libraries:
 requests
 beautifulsoup4
 pytest
+pytest-cov
 ```
 
 These dependencies are listed in `requirements.txt`.
@@ -344,7 +350,7 @@ For each word, the index stores:
 - the frequency of the word on that page
 - the positions where the word occurs
 
-This is more useful than a basic index that only records whether a word appears on a page.
+This is more useful than a basic index that only records whether a word appears on a page. Storing positional data also gives the index more flexibility if phrase search or proximity-based ranking were added in the future.
 
 ---
 
@@ -365,6 +371,8 @@ life life life
 ```
 
 This means the search is case-insensitive and punctuation does not create separate word entries.
+
+This was an improvement over a simpler `.split()` approach, which would treat words such as `life`, `life,`, and `life.` as different tokens.
 
 ---
 
@@ -413,6 +421,27 @@ This ranking feature goes beyond the basic requirement of simply returning match
 
 ---
 
+## Storage
+
+The generated inverted index is saved as a JSON file:
+
+```text
+data/index.json
+```
+
+This allows the index to be reused without crawling the website every time.
+
+The workflow is:
+
+```text
+build → crawl website → build index → save index
+load  → load saved index → search using print/find
+```
+
+Using JSON keeps the saved index human-readable and easy to inspect during development and marking.
+
+---
+
 ## Complexity Analysis
 
 The main operations in the search engine are crawling, indexing, loading, printing, and searching.
@@ -442,7 +471,7 @@ Space complexity: O(U + O)
 Where:
 
 - `U` is the number of unique words
-- `O` is the total number of stored word occurrences/positions
+- `O` is the total number of stored word occurrences and positions
 
 The index stores frequency and positional information, so it requires more space than a basic word-to-page index, but it provides richer search statistics.
 
@@ -457,7 +486,7 @@ Average lookup time: O(1)
 Result processing and ranking: O(R log R)
 ```
 
-Where `R` is the number of matching pages. The `R log R` factor comes from sorting/ranking the results.
+Where `R` is the number of matching pages. The `R log R` factor comes from sorting and ranking the results.
 
 ---
 
@@ -494,24 +523,7 @@ The project uses a nested dictionary for the inverted index because it provides 
 
 The trade-off is that storing positions increases memory usage, but it improves the quality of the index and allows more detailed search statistics to be displayed.
 
----
-
-## Storage
-
-The generated inverted index is saved as a JSON file:
-
-```text
-data/index.json
-```
-
-This allows the index to be reused without crawling the website every time.
-
-The workflow is:
-
-```text
-build → crawl website → build index → save index
-load  → load saved index → search using print/find
-```
+Another design choice was to focus the crawler on the paginated quote pages rather than crawling author and tag pages. The paginated pages contain the main searchable quote content required for the assignment, while author and tag pages could introduce duplicate or less relevant content into the index.
 
 ---
 
@@ -538,14 +550,14 @@ Example benchmark output:
 Build Benchmark
 Pages crawled: 10
 Unique words indexed: 842
-Total build time: 64.47 seconds
+Total build time: 64.44 seconds
 Index loaded from data/index.json
 
 Search Benchmark
-Query: 'life' | Results: 10 | Search time: 0.000126 seconds
-Query: 'love' | Results: 10 | Search time: 0.000118 seconds
-Query: 'change world' | Results: 2 | Search time: 0.000107 seconds
-Query: 'xyzabc' | Results: 0 | Search time: 0.000105 seconds
+Query: 'life' | Results: 10 | Search time: 0.000136 seconds
+Query: 'love' | Results: 10 | Search time: 0.000119 seconds
+Query: 'change world' | Results: 2 | Search time: 0.000113 seconds
+Query: 'xyzabc' | Results: 0 | Search time: 0.000111 seconds
 ```
 
 The build time is mainly affected by the required 6-second politeness delay between page requests. Search queries are much faster because they use the saved inverted index instead of crawling the website again.
@@ -562,10 +574,19 @@ Run all tests with:
 pytest
 ```
 
+To run the tests with coverage reporting:
+
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
+The test suite currently contains **35 tests** and achieves approximately **98% total coverage** across the `src/` package.
+
 The test suite covers:
 
 - crawler text extraction
 - crawler pagination
+- crawler request exception handling
 - crawler behaviour using mocked HTTP requests
 - tokenisation
 - index creation
@@ -580,8 +601,11 @@ The test suite covers:
 - deterministic result ordering
 - saving and loading the index
 - command-line result display
+- command-line `build`, `load`, `print`, `find`, `exit`, empty input, and unknown command behaviour
 
 Crawler tests use mocking rather than live network requests. This makes the tests faster, more reliable, and independent of the target website being available during testing.
+
+Testing the command-line interface was important because the CLI controls the required coursework commands. Mocking `input()` allowed the interactive command loop to be tested automatically without manual input.
 
 ---
 
@@ -600,31 +624,43 @@ The implementation started with a basic crawler and simple inverted index. It wa
 - command-line interface
 - TF-IDF-style ranking
 - automated testing and edge-case handling
+- command-line interface testing using mocked input
+- test coverage reporting using `pytest-cov`
 - benchmarking and complexity analysis
+- final documentation and README improvements
 
 This iterative approach helped validate each component before adding further functionality.
 
+GitHub issues were also used to document the main development tasks and show the progression from initial setup to final testing and documentation.
+
 ---
 
-## GenAI Usage Declaration
+## GenAI Usage Declaration and Critical Evaluation
 
-Generative AI was used as a development support tool during this coursework.
+Generative AI was used as a development support tool during this coursework. The main tools used were ChatGPT and Claude. They were used to support planning, debugging, explanation, testing strategy, and review. They were not used as a replacement for understanding or validation.
 
-It was used to help with:
+GenAI helped in several useful ways:
 
-- planning the project structure
-- understanding the assignment requirements
-- debugging Python import and dependency issues
-- designing the inverted index structure
-- improving the testing strategy
-- reviewing possible code improvements
-- preparing the development workflow
+- planning the project structure around separate crawler, indexer, search, storage, and CLI modules
+- interpreting the coursework brief and mapping features to marking criteria
+- debugging early Python environment issues such as `python` versus `python3`, missing dependencies, virtual environments, and import path problems
+- suggesting an incremental development workflow with meaningful Git commits
+- helping design unit tests for individual components
+- reviewing the project against the marking rubric
+- identifying that the CLI loop needed stronger automated testing
+- suggesting benchmarking and complexity analysis as evidence for higher-band criteria
 
-The code was not used blindly. AI-generated suggestions were tested, modified, and improved throughout development.
+However, AI-generated suggestions were not accepted blindly. Some early suggestions were useful starting points but were too basic for a high-mark submission. For example, the initial inverted index design only stored which pages contained a word. This was later improved to store both frequency and positional information, which better matches the coursework requirement for word statistics.
 
-For example, the initial indexing approach was basic and was later improved to store both frequency and positional data. Similarly, the first tokenisation approach used simple string splitting, but this was later replaced with regex tokenisation to handle punctuation and case more accurately.
+Another example was tokenisation. A simple `.split()` approach was easy to implement, but it caused punctuation problems because words such as `life`, `life,`, and `life.` could be treated differently. This was improved using regex-based tokenisation, making the index cleaner and the search behaviour more reliable.
 
-AI was useful for speeding up development and debugging, but it also required critical evaluation. Some early suggestions were too simple for the assignment requirements and had to be refined to better match the marking criteria and demonstrate understanding of search engine concepts.
+The search function also developed beyond the minimum requirement. The basic requirement was to return pages containing the query terms. After the core functionality was working, a TF-IDF-style ranking system was added so that matching pages could be ordered by relevance rather than only being returned alphabetically. This was added carefully after the basic intersection logic was already working and tested.
+
+GenAI also had limitations. Some suggestions focused on making the code work quickly, but not necessarily on proving correctness. For example, the original test suite covered the indexer and search logic but did not test enough of the command-line interface. After reviewing this limitation, additional tests were added using mocked `input()` to cover the `build`, `load`, `print`, `find`, `exit`, empty input, and unknown command paths.
+
+Using GenAI affected the development process by speeding up debugging and helping generate ideas, but the final implementation was refined through manual testing, automated tests, code review, and design decisions. The final project reflects an iterative process where AI suggestions were checked, improved, and adapted to the assignment requirements.
+
+Overall, GenAI was most useful as a guide and reviewer. It helped identify possible improvements, but the important decisions were validated through testing, Git history, benchmark results, and understanding of the search engine concepts implemented in the code.
 
 ---
 
@@ -635,6 +671,7 @@ AI was useful for speeding up development and debugging, but it also required cr
 - The saved index file is located at `data/index.json`.
 - The benchmark script is located at `benchmark.py`.
 - The project can be tested using `pytest`.
+- Coverage can be checked using `pytest --cov=src --cov-report=term-missing`.
 - The command-line interface supports `build`, `load`, `print`, `find`, and `exit`.
 
 ---

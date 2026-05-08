@@ -1,12 +1,20 @@
-import requests
+"""Crawler module for collecting page text from quotes.toscrape.com.
+
+This module starts from the base URL, follows pagination links, respects
+the required politeness delay, and returns the extracted page text for
+indexing.
+"""
+
+import requests, time
 from bs4 import BeautifulSoup
-import time
 
 BASE_URL = "https://quotes.toscrape.com"
 DELAY = 6
 REQUEST_TIMEOUT = 10
 
 def crawl():
+    """Crawl the target website and return a dictionary of URL to page text."""
+
     urls = [BASE_URL]
     visited = set()
     pages = {}
