@@ -1,5 +1,6 @@
 from unittest.mock import patch, Mock
 from src.crawler import crawl
+import requests
 
 
 def test_crawler_extracts_page_text():
@@ -59,3 +60,13 @@ def test_crawler_follows_next_page_link():
     assert len(pages) == 2
     assert "https://quotes.toscrape.com" in pages
     assert "https://quotes.toscrape.com/page/2/" in pages
+
+def test_crawler_handles_request_exception(capsys):
+    with patch("src.crawler.requests.get", side_effect=requests.exceptions.RequestException("Network error")):
+        pages = crawl()
+
+    captured = capsys.readouterr()
+
+    assert pages == {}
+    assert "Error fetching" in captured.out
+    assert "Network error" in captured.out

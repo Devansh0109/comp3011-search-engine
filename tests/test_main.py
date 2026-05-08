@@ -177,3 +177,4 @@ def test_main_build_command(capsys):
 
     assert "Number of pages crawled: 1" in captured.out
     assert "Number of unique words indexed: 1" in captured.out
+

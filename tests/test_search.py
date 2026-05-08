@@ -130,3 +130,19 @@ def test_tfidf_scores_only_include_pages_matching_all_query_words():
     assert "page3" not in scores
     assert scores["page1"] > 0
 
+def test_calculate_tfidf_scores_with_empty_index():
+    scores = calculate_tfidf_scores({}, "hello")
+
+    assert scores == {}
+
+def test_calculate_tfidf_scores_returns_empty_when_query_word_missing():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    scores = calculate_tfidf_scores(index, "hello missing")
+
+    assert scores == {}
+
