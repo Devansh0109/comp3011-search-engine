@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from src.main import display_results, main
+from src.main import display_help, display_results, display_suggestions, main
 
 
 def test_display_results_with_matches(capsys):
@@ -178,3 +178,111 @@ def test_main_build_command(capsys):
     assert "Number of pages crawled: 1" in captured.out
     assert "Number of unique words indexed: 1" in captured.out
 
+def test_display_help(capsys):
+    display_help()
+
+    captured = capsys.readouterr()
+
+    assert "Available commands:" in captured.out
+    assert "phrase <query>" in captured.out
+
+
+def test_display_suggestions(capsys):
+    index = {
+        "love": {
+            "page1": {
+                "frequency": 1,
+                "positions": [0]
+            }
+        }
+    }
+
+    display_suggestions(index, "lov")
+
+    captured = capsys.readouterr()
+
+    assert "Did you mean for 'lov': love?" in captured.out
+
+
+def test_main_help_command(capsys):
+    with patch("builtins.input", side_effect=["help", "exit"]):
+        main()
+
+    captured = capsys.readouterr()
+
+    assert "Available commands:" in captured.out
+    assert "phrase <query>" in captured.out
+
+
+def test_main_phrase_before_loading_index(capsys):
+    with patch("builtins.input", side_effect=["phrase change world", "exit"]):
+        main()
+
+    captured = capsys.readouterr()
+
+    assert "No index loaded" in captured.out
+
+
+def test_main_load_then_phrase(capsys):
+    mock_index = {
+        "change": {
+            "page1": {
+                "frequency": 1,
+                "positions": [0]
+            }
+        },
+        "world": {
+            "page1": {
+                "frequency": 1,
+                "positions": [1]
+            }
+        }
+    }
+
+    with patch("builtins.input", side_effect=["load", "phrase change world", "exit"]):
+        with patch("src.main.load_index", return_value=mock_index):
+            main()
+
+    captured = capsys.readouterr()
+
+    assert "Pages containing phrase 'change world':" in captured.out
+    assert "page1" in captured.out
+
+
+def test_main_phrase_without_query(capsys):
+    mock_index = {
+        "hello": {
+            "page1": {
+                "frequency": 1,
+                "positions": [0]
+            }
+        }
+    }
+
+    with patch("builtins.input", side_effect=["load", "phrase", "exit"]):
+        with patch("src.main.load_index", return_value=mock_index):
+            main()
+
+    captured = capsys.readouterr()
+
+    assert "Usage: phrase <query>" in captured.out
+
+
+def test_main_find_displays_suggestions(capsys):
+    mock_index = {
+        "love": {
+            "page1": {
+                "frequency": 1,
+                "positions": [0]
+            }
+        }
+    }
+
+    with patch("builtins.input", side_effect=["load", "find lov", "exit"]):
+        with patch("src.main.load_index", return_value=mock_index):
+            main()
+
+    captured = capsys.readouterr()
+
+    assert "No results found for 'lov'" in captured.out
+    assert "Did you mean for 'lov': love?" in captured.out
