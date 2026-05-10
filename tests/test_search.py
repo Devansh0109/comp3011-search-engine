@@ -1,4 +1,10 @@
-from src.search import print_word, find_word, calculate_tfidf_scores
+from src.search import (
+    print_word,
+    find_word,
+    calculate_tfidf_scores,
+    find_phrase,
+    suggest_words,
+)
 
 def test_print_word_found(capsys):
     index = {
@@ -146,3 +152,73 @@ def test_calculate_tfidf_scores_returns_empty_when_query_word_missing():
 
     assert scores == {}
 
+def test_find_phrase_returns_page_for_exact_phrase():
+    index = {
+        "change": {
+            "page1": {"frequency": 1, "positions": [0]},
+            "page2": {"frequency": 1, "positions": [3]}
+        },
+        "world": {
+            "page1": {"frequency": 1, "positions": [1]},
+            "page2": {"frequency": 1, "positions": [7]}
+        }
+    }
+
+    results = find_phrase(index, "change world")
+
+    assert results == ["page1"]
+
+
+def test_find_phrase_returns_empty_when_words_not_consecutive():
+    index = {
+        "change": {
+            "page1": {"frequency": 1, "positions": [0]}
+        },
+        "world": {
+            "page1": {"frequency": 1, "positions": [3]}
+        }
+    }
+
+    results = find_phrase(index, "change world")
+
+    assert results == []
+
+
+def test_find_phrase_single_word_uses_normal_search():
+    index = {
+        "hello": {
+            "page1": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    results = find_phrase(index, "hello")
+
+    assert results == ["page1"]
+
+
+def test_suggest_words_returns_close_match_for_missing_word():
+    index = {
+        "love": {
+            "page1": {"frequency": 1, "positions": [0]}
+        },
+        "life": {
+            "page2": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    suggestions = suggest_words(index, "lov")
+
+    assert "lov" in suggestions
+    assert "love" in suggestions["lov"]
+
+
+def test_suggest_words_returns_empty_for_known_word():
+    index = {
+        "love": {
+            "page1": {"frequency": 1, "positions": [0]}
+        }
+    }
+
+    suggestions = suggest_words(index, "love")
+
+    assert suggestions == {}

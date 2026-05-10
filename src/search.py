@@ -6,6 +6,12 @@ are returned. Matching pages are ranked using a TF-IDF-style score.
 """
 
 import math
+import difflib
+import re
+
+def tokenize_query(query):
+    """Convert a user query into lowercase word tokens without punctuation."""
+    return re.findall(r"\b[a-zA-Z]+\b", query.lower())
 
 def print_word(index, word):
     """Print the inverted index entry for a single word."""
@@ -76,3 +82,64 @@ def find_word(index, query):
     scores = calculate_tfidf_scores(index, query)
 
     return sorted(scores.keys(), key=lambda page: (-scores[page], page))
+
+def find_phrase(index, phrase):
+    """Return pages where all words in a phrase appear consecutively."""
+    words = tokenize_query(phrase)
+
+    if not words:
+        return []
+
+    if len(words) == 1:
+        return find_word(index, words[0])
+
+    for word in words:
+        if word not in index:
+            return []
+
+    candidate_pages = set(index[words[0]].keys())
+
+    for word in words[1:]:
+        candidate_pages = candidate_pages.intersection(index[word].keys())
+
+    matching_pages = []
+
+    for page in candidate_pages:
+        first_word_positions = index[words[0]][page]["positions"]
+
+        for start_position in first_word_positions:
+            phrase_found = True
+
+            for offset, word in enumerate(words[1:], start=1):
+                expected_position = start_position + offset
+                word_positions = index[word][page]["positions"]
+
+                if expected_position not in word_positions:
+                    phrase_found = False
+                    break
+
+            if phrase_found:
+                matching_pages.append(page)
+                break
+
+    return sorted(matching_pages)
+
+
+def suggest_words(index, query, max_suggestions=3):
+    """Suggest close indexed words for query terms that are not found."""
+    suggestions = {}
+    vocabulary = list(index.keys())
+
+    for word in tokenize_query(query):
+        if word not in index:
+            matches = difflib.get_close_matches(
+                word,
+                vocabulary,
+                n=max_suggestions,
+                cutoff=0.75
+            )
+
+            if matches:
+                suggestions[word] = matches
+
+    return suggestions
