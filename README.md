@@ -18,7 +18,10 @@ The project demonstrates key search engine concepts including:
 - command-line interaction
 - automated testing
 - TF-IDF-style ranking
+- exact phrase search
+- query suggestions
 - benchmarking and complexity analysis
+- continuous integration using GitHub Actions
 - critical use of Generative AI during development
 
 The implementation is written in Python and uses `requests` for HTTP requests and `BeautifulSoup` for parsing HTML pages.
@@ -51,13 +54,17 @@ This website contains multiple pages of quotes and is designed for web scraping 
 - Saves the generated index to `data/index.json`
 - Loads the saved index from the file system
 - Provides an interactive command-line interface
+- Includes a `help` command for command-line usability
 - Supports single-word and multi-word queries
 - Uses intersection logic for multi-word queries
 - Ranks matching pages using a TF-IDF-style relevance score
+- Supports exact phrase search using stored word positions
+- Suggests close matching words for misspelled query terms
 - Handles missing words, empty queries, unknown commands, and missing index files gracefully
 - Includes automated tests using `pytest`
 - Includes test coverage reporting using `pytest-cov`
-- Includes a benchmark script for build and search performance
+- Includes a GitHub Actions workflow for automated testing
+- Includes a benchmark script for build, search, phrase search, and suggestion performance
 
 ---
 
@@ -65,6 +72,9 @@ This website contains multiple pages of quotes and is designed for web scraping 
 
 ```text
 comp3011-search-engine/
+├── .github/
+│   └── workflows/
+│       └── tests.yml
 ├── benchmark.py
 ├── data/
 │   └── index.json
@@ -159,7 +169,14 @@ After running the tool, the following interactive prompt should appear:
 
 ```text
 Search Engine Tool
-Available commands: build, load, print <word>, find <query>, exit
+Available commands:
+  build             Crawl the website, build the index, and save it
+  load              Load the saved index from data/index.json
+  print <word>      Print frequency and positions for a word
+  find <query>      Find pages containing all query words
+  phrase <query>    Find pages containing an exact phrase
+  help              Show this help message
+  exit              Exit the search tool
 >
 ```
 
@@ -263,9 +280,69 @@ Multi-word search uses intersection logic, meaning only pages containing **all**
 
 The matching pages are ranked using a TF-IDF-style relevance score.
 
+If no results are found, the tool may suggest close matching words from the index.
+
+Example:
+
+```text
+> find lov
+No results found for 'lov'
+Did you mean for 'lov': love, loves, lover?
+```
+
 ---
 
-### 5. `exit`
+### 5. `phrase <query>`
+
+The `phrase` command returns pages where the query words appear consecutively.
+
+```text
+> phrase universal truth
+```
+
+Example output:
+
+```text
+Pages containing phrase 'universal truth':
+https://quotes.toscrape.com/page/2/
+```
+
+This command uses the positional information stored in the inverted index. It demonstrates why storing word positions is useful beyond simply displaying index statistics.
+
+This is different from:
+
+```text
+> find change world
+```
+
+The `find` command only checks whether both words appear somewhere on the same page. The `phrase` command checks whether the words appear next to each other.
+
+---
+
+### 6. `help`
+
+The `help` command displays all available commands.
+
+```text
+> help
+```
+
+Example output:
+
+```text
+Available commands:
+  build             Crawl the website, build the index, and save it
+  load              Load the saved index from data/index.json
+  print <word>      Print frequency and positions for a word
+  find <query>      Find pages containing all query words
+  phrase <query>    Find pages containing an exact phrase
+  help              Show this help message
+  exit              Exit the search tool
+```
+
+---
+
+### 7. `exit`
 
 The `exit` command closes the command-line tool.
 
@@ -287,28 +364,41 @@ Exiting search tool.
 > load
 Index loaded from data/index.json
 
+> help
+Available commands:
+  build             Crawl the website, build the index, and save it
+  load              Load the saved index from data/index.json
+  print <word>      Print frequency and positions for a word
+  find <query>      Find pages containing all query words
+  phrase <query>    Find pages containing an exact phrase
+  help              Show this help message
+  exit              Exit the search tool
+
 > print life
 Word: life
 Page: https://quotes.toscrape.com, Frequency: 4, Positions: [70, 94, 196, 272]
 Page: https://quotes.toscrape.com/page/2/, Frequency: 10, Positions: [8, 207, 228, 488, 524, 588, 598, 599, 617, 630]
-
-> find love
-Pages containing 'love':
-https://quotes.toscrape.com
-https://quotes.toscrape.com/page/10/
-https://quotes.toscrape.com/page/2/
-https://quotes.toscrape.com/page/3/
-https://quotes.toscrape.com/page/4/
-https://quotes.toscrape.com/page/5/
-https://quotes.toscrape.com/page/6/
-https://quotes.toscrape.com/page/7/
-https://quotes.toscrape.com/page/8/
-https://quotes.toscrape.com/page/9/
+Page: https://quotes.toscrape.com/page/3/, Frequency: 2, Positions: [207, 323]
+Page: https://quotes.toscrape.com/page/4/, Frequency: 1, Positions: [243]
+Page: https://quotes.toscrape.com/page/5/, Frequency: 3, Positions: [103, 122, 259]
+Page: https://quotes.toscrape.com/page/6/, Frequency: 5, Positions: [124, 253, 259, 271, 280]
+Page: https://quotes.toscrape.com/page/7/, Frequency: 2, Positions: [331, 405]
+Page: https://quotes.toscrape.com/page/8/, Frequency: 1, Positions: [308]
+Page: https://quotes.toscrape.com/page/9/, Frequency: 3, Positions: [288, 307, 377]
+Page: https://quotes.toscrape.com/page/10/, Frequency: 5, Positions: [55, 67, 121, 155, 264]
 
 > find change world
 Pages containing 'change world':
 https://quotes.toscrape.com
 https://quotes.toscrape.com/page/2/
+
+> phrase universal truth
+Pages containing phrase 'universal truth':
+https://quotes.toscrape.com/page/2/
+
+> find lov
+No results found for 'lov'
+Did you mean for 'lov': love, loves, lover?
 
 > find xyzabc
 No results found for 'xyzabc'
@@ -318,6 +408,9 @@ Usage: find <query>
 
 > print
 Usage: print <word>
+
+> phrase
+Usage: phrase <query>
 
 > exit
 Exiting search tool.
@@ -350,7 +443,7 @@ For each word, the index stores:
 - the frequency of the word on that page
 - the positions where the word occurs
 
-This is more useful than a basic index that only records whether a word appears on a page. Storing positional data also gives the index more flexibility if phrase search or proximity-based ranking were added in the future.
+This is more useful than a basic index that only records whether a word appears on a page. Storing positional data also gives the index more flexibility because it supports phrase search and could support proximity-based ranking in the future.
 
 ---
 
@@ -399,6 +492,47 @@ If two pages have the same relevance score, they are sorted alphabetically by UR
 
 ---
 
+## Exact Phrase Search
+
+The project also supports exact phrase search using the `phrase` command.
+
+Unlike a normal multi-word `find`, phrase search checks the stored positions of each word and only returns pages where the words appear consecutively.
+
+For example:
+
+```text
+phrase universal truth
+```
+
+checks whether `universal` and `truth` appear next to each other in the same page.
+
+This feature makes practical use of positional indexing. Instead of storing positions only for display, the tool uses them to support more advanced search behaviour.
+
+---
+
+## Query Suggestions
+
+The tool provides simple query suggestions using Python’s built-in `difflib` module.
+
+If a query returns no results, the system checks whether any missing query terms are close to known words in the index.
+
+Example:
+
+```text
+find lov
+```
+
+produces:
+
+```text
+No results found for 'lov'
+Did you mean for 'lov': love, loves, lover?
+```
+
+This improves the command-line user experience without changing the core indexing structure.
+
+---
+
 ## TF-IDF-Style Ranking
 
 The basic requirement for the `find` command is to return pages that contain the search query terms. As an additional enhancement, the search tool ranks matching pages using a TF-IDF-style relevance score.
@@ -435,7 +569,7 @@ The workflow is:
 
 ```text
 build → crawl website → build index → save index
-load  → load saved index → search using print/find
+load  → load saved index → search using print/find/phrase
 ```
 
 Using JSON keeps the saved index human-readable and easy to inspect during development and marking.
@@ -444,7 +578,7 @@ Using JSON keeps the saved index human-readable and easy to inspect during devel
 
 ## Complexity Analysis
 
-The main operations in the search engine are crawling, indexing, loading, printing, and searching.
+The main operations in the search engine are crawling, indexing, loading, printing, searching, phrase searching, and saving/loading.
 
 ### Crawling
 
@@ -504,6 +638,38 @@ After matching pages are found, the tool calculates a TF-IDF-style score and sor
 
 ---
 
+### Phrase Search
+
+For a phrase query with `Q` words, the tool first finds pages containing all words and then checks whether their stored positions are consecutive.
+
+```text
+Time complexity: O(Q × R × L)
+```
+
+Where:
+
+- `Q` is the number of words in the phrase
+- `R` is the number of candidate pages containing all phrase words
+- `L` is the number of positions checked for the first word in each candidate page
+
+This is more expensive than a normal multi-word query, but it provides more precise search behaviour.
+
+---
+
+### Query Suggestions
+
+Query suggestions compare missing query terms against the indexed vocabulary.
+
+```text
+Time complexity: O(V)
+```
+
+Where `V` is the number of unique words in the vocabulary.
+
+This is acceptable for the small target website and improves usability when a user mistypes a query.
+
+---
+
 ### Storage
 
 Saving and loading the index require reading or writing the full JSON index file.
@@ -521,9 +687,11 @@ Where `S` is the size of the saved index file.
 
 The project uses a nested dictionary for the inverted index because it provides fast word lookups and makes the data easy to save as JSON.
 
-The trade-off is that storing positions increases memory usage, but it improves the quality of the index and allows more detailed search statistics to be displayed.
+The trade-off is that storing positions increases memory usage, but it improves the quality of the index and allows more detailed search statistics, phrase search, and future proximity-based search.
 
 Another design choice was to focus the crawler on the paginated quote pages rather than crawling author and tag pages. The paginated pages contain the main searchable quote content required for the assignment, while author and tag pages could introduce duplicate or less relevant content into the index.
+
+The crawler extracts full page text using BeautifulSoup. Therefore, word positions are based on the tokenised full page text, including page-level text such as titles and navigation, not only the visible quote body.
 
 ---
 
@@ -542,7 +710,9 @@ The benchmark measures:
 - total build time
 - number of pages crawled
 - number of unique indexed words
-- search time for example queries
+- normal search time for example queries
+- phrase search time for example phrases
+- suggestion generation time for misspelled query terms
 
 Example benchmark output:
 
@@ -550,14 +720,26 @@ Example benchmark output:
 Build Benchmark
 Pages crawled: 10
 Unique words indexed: 842
-Total build time: 64.44 seconds
+Total build time: 64.41 seconds
 Index loaded from data/index.json
 
 Search Benchmark
-Query: 'life' | Results: 10 | Search time: 0.000136 seconds
-Query: 'love' | Results: 10 | Search time: 0.000119 seconds
-Query: 'change world' | Results: 2 | Search time: 0.000113 seconds
-Query: 'xyzabc' | Results: 0 | Search time: 0.000111 seconds
+Query: 'life' | Results: 10 | Search time: 0.000132 seconds
+Query: 'love' | Results: 10 | Search time: 0.000100 seconds
+Query: 'change world' | Results: 2 | Search time: 0.000094 seconds
+Query: 'xyzabc' | Results: 0 | Search time: 0.000089 seconds
+Index loaded from data/index.json
+
+Phrase Search Benchmark
+Phrase: 'universal truth' | Results: 1 | Phrase search time: 0.000021 seconds
+Phrase: 'good thing' | Results: 1 | Phrase search time: 0.000009 seconds
+Phrase: 'creating yourself' | Results: 1 | Phrase search time: 0.000004 seconds
+Index loaded from data/index.json
+
+Suggestion Benchmark
+Query: 'lov' | Suggestions: {'lov': ['love', 'loves', 'lover']} | Suggestion time: 0.000612 seconds
+Query: 'lif' | Suggestions: {'lif': ['life', 'if']} | Suggestion time: 0.000521 seconds
+Query: 'xyzabc' | Suggestions: {} | Suggestion time: 0.000861 seconds
 ```
 
 The build time is mainly affected by the required 6-second politeness delay between page requests. Search queries are much faster because they use the saved inverted index instead of crawling the website again.
@@ -580,7 +762,22 @@ To run the tests with coverage reporting:
 pytest --cov=src --cov-report=term-missing
 ```
 
-The test suite currently contains **35 tests** and achieves approximately **98% total coverage** across the `src/` package.
+The test suite currently contains **48 tests** and achieves **98% total coverage** across the `src/` package.
+
+Current coverage summary:
+
+```text
+Name              Stmts   Miss  Cover
+-------------------------------------
+src/__init__.py       0      0   100%
+src/crawler.py       30      1    97%
+src/indexer.py       15      0   100%
+src/main.py          87      2    98%
+src/search.py        80      2    98%
+src/storage.py       15      0   100%
+-------------------------------------
+TOTAL               227      5    98%
+```
 
 The test suite covers:
 
@@ -594,6 +791,8 @@ The test suite covers:
 - word position tracking
 - single-word search
 - multi-word search
+- exact phrase search
+- query suggestions for misspelled words
 - TF-IDF-style relevance scoring
 - ranking pages by query relevance
 - empty queries
@@ -601,11 +800,31 @@ The test suite covers:
 - deterministic result ordering
 - saving and loading the index
 - command-line result display
-- command-line `build`, `load`, `print`, `find`, `exit`, empty input, and unknown command behaviour
+- command-line `build`, `load`, `print`, `find`, `phrase`, `help`, `exit`, empty input, and unknown command behaviour
 
 Crawler tests use mocking rather than live network requests. This makes the tests faster, more reliable, and independent of the target website being available during testing.
 
 Testing the command-line interface was important because the CLI controls the required coursework commands. Mocking `input()` allowed the interactive command loop to be tested automatically without manual input.
+
+---
+
+## Continuous Integration
+
+The project includes a GitHub Actions workflow located at:
+
+```text
+.github/workflows/tests.yml
+```
+
+The workflow runs automatically on pushes and pull requests to the `main` branch.
+
+It installs the project dependencies and runs:
+
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
+This provides automated evidence that the test suite continues to pass after changes are pushed to GitHub.
 
 ---
 
@@ -623,9 +842,12 @@ The implementation started with a basic crawler and simple inverted index. It wa
 - JSON index persistence
 - command-line interface
 - TF-IDF-style ranking
+- exact phrase search using positional index data
+- query suggestion support using close word matching
 - automated testing and edge-case handling
 - command-line interface testing using mocked input
 - test coverage reporting using `pytest-cov`
+- GitHub Actions workflow for automated test execution
 - benchmarking and complexity analysis
 - final documentation and README improvements
 
@@ -649,6 +871,7 @@ GenAI helped in several useful ways:
 - reviewing the project against the marking rubric
 - identifying that the CLI loop needed stronger automated testing
 - suggesting benchmarking and complexity analysis as evidence for higher-band criteria
+- comparing the project against another implementation and identifying safe enhancements such as phrase search, query suggestions, help command, and CI testing
 
 However, AI-generated suggestions were not accepted blindly. Some early suggestions were useful starting points but were too basic for a high-mark submission. For example, the initial inverted index design only stored which pages contained a word. This was later improved to store both frequency and positional information, which better matches the coursework requirement for word statistics.
 
@@ -656,7 +879,13 @@ Another example was tokenisation. A simple `.split()` approach was easy to imple
 
 The search function also developed beyond the minimum requirement. The basic requirement was to return pages containing the query terms. After the core functionality was working, a TF-IDF-style ranking system was added so that matching pages could be ordered by relevance rather than only being returned alphabetically. This was added carefully after the basic intersection logic was already working and tested.
 
-GenAI also had limitations. Some suggestions focused on making the code work quickly, but not necessarily on proving correctness. For example, the original test suite covered the indexer and search logic but did not test enough of the command-line interface. After reviewing this limitation, additional tests were added using mocked `input()` to cover the `build`, `load`, `print`, `find`, `exit`, empty input, and unknown command paths.
+A further improvement was exact phrase search. Since the index already stored word positions, this information was used to support a `phrase` command that checks whether query words appear consecutively. This was a useful design improvement because it showed that positional indexing was not only stored for display, but could also support more advanced search behaviour.
+
+Another later improvement was query suggestions. This was added after considering user experience: if a query returned no results because of a small spelling mistake, the system could suggest close matching indexed words. This made the CLI more helpful without changing the core indexing structure.
+
+GenAI also had limitations. Some suggestions focused on making the code work quickly, but not necessarily on proving correctness. For example, the original test suite covered the indexer and search logic but did not test enough of the command-line interface. After reviewing this limitation, additional tests were added using mocked `input()` to cover the `build`, `load`, `print`, `find`, `phrase`, `help`, `exit`, empty input, and unknown command paths.
+
+Another important point was scope control. A broader crawler could have followed author and tag pages, but this might have introduced duplicate or less relevant content. The final design focuses on the paginated quote pages because these contain the main searchable content required for the assignment.
 
 Using GenAI affected the development process by speeding up debugging and helping generate ideas, but the final implementation was refined through manual testing, automated tests, code review, and design decisions. The final project reflects an iterative process where AI suggestions were checked, improved, and adapted to the assignment requirements.
 
@@ -670,9 +899,10 @@ Overall, GenAI was most useful as a guide and reviewer. It helped identify possi
 - Running `build` takes longer than `load` because it crawls all pages.
 - The saved index file is located at `data/index.json`.
 - The benchmark script is located at `benchmark.py`.
+- The GitHub Actions workflow is located at `.github/workflows/tests.yml`.
 - The project can be tested using `pytest`.
 - Coverage can be checked using `pytest --cov=src --cov-report=term-missing`.
-- The command-line interface supports `build`, `load`, `print`, `find`, and `exit`.
+- The command-line interface supports `build`, `load`, `print`, `find`, `phrase`, `help`, and `exit`.
 
 ---
 
